@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ColorTune</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="header">
+    <h1>ColorTune</h1>
+    <p>Веб-инструмент автоматизированной цветокоррекции рекламной графики</p>
+</header>
+
+<main class="app">
+    <!-- ЛЕВАЯ КОЛОНКА -->
+    <section class="panel">
+        <h3>1. Загрузка изображения</h3>
+
+        <div class="upload-box">
+            <input type="file" id="fileInput" name="file" form="processForm" accept="image/*" required>
+            <span>Перетащите изображение или нажмите для выбора</span>
+        </div>
+
+        <div class="preview">
+            <img id="inputPreview">
+        </div>
+
+        <h3>2. Параметры коррекции</h3>
+
+        <form id="processForm">
+            <label>Стиль цветокоррекции</label>
+            <select name="style">
+                <option value="neutral">Нейтральный</option>
+                <option value="vibrant">Яркий</option>
+                <option value="warm">Тёплый</option>
+                <option value="cool">Холодный</option>
+                <option value="vintage">Винтаж</option>
+            </select>
+
+            <label>Интенсивность коррекции</label>
+            <input type="range" name="intensity" min="0" max="100" value="80">
+
+            <button type="submit">Запустить автоматическую коррекцию</button>
+        </form>
+    </section>
+
+    <!-- ПРАВАЯ КОЛОНКА -->
+    <section class="panel">
+        <h3>3. Результат обработки</h3>
+
+        <div class="preview">
+            <div id="aiStatus" class="ai-status hidden">
+                <div class="spinner"></div>
+                <p>ИИ анализирует изображение…</p>
+                <progress id="progressBar" value="0" max="100"></progress>
+            </div>
+            <img id="resultPreview">
+        </div>
+
+        <a id="downloadBtn" class="download-btn hidden" download>Скачать изображение</a>
+    </section>
+</main>
+
+<footer class="footer">
+    © 2025 ColorTune — прототип веб-приложения автоматизированной цветокоррекции рекламной графики
+</footer>
+
+<script>
+const fileInput = document.getElementById("fileInput");
+const inputPreview = document.getElementById("inputPreview");
+const resultPreview = document.getElementById("resultPreview");
+const form = document.getElementById("processForm");
+const aiStatus = document.getElementById("aiStatus");
+const progressBar = document.getElementById("progressBar");
+const downloadBtn = document.getElementById("downloadBtn");
+
+// Предпросмотр исходного изображения
+fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => inputPreview.src = e.target.result;
+    reader.readAsDataURL(file);
+});
+
+// Отправка на сервер без перезагрузки
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    aiStatus.classList.remove("hidden");
+    resultPreview.style.display = "none";
+    downloadBtn.classList.add("hidden");
+    progressBar.value = 0;
+
+    let p = 0;
+    const fakeProgress = setInterval(() => {
+        p += 10;
+        progressBar.value = p;
+        if (p >= 90) clearInterval(fakeProgress);
+    }, 200);
+
+    const formData = new FormData(form);
+    formData.append("file", fileInput.files[0]);
+
+    const response = await fetch("/process", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+
+    clearInterval(fakeProgress);
+    progressBar.value = 100;
+
+    setTimeout(() => {
+        aiStatus.classList.add("hidden");
+        resultPreview.src = data.result_image + "?t=" + Date.now();
+        resultPreview.style.display = "block";
+        downloadBtn.href = data.result_image;
+        downloadBtn.classList.remove("hidden");
+    }, 500);
+});
+</script>
+
+</body>
+</html>
